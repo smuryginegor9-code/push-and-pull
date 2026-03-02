@@ -1,0 +1,19 @@
+{
+  "name": "push-me",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "backend",
+    "frontend",
+    "bot"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev": "npm run dev --workspace backend",
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:bot": "npm run dev --workspace bot",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend && npm run build --workspace bot",
+    "test": "npm run test --workspace backend"
+  }
+}

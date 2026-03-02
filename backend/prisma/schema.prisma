@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String          @id @default(uuid())
+  telegramId  String          @unique
+  username    String?
+  firstName   String?
+  lastName    String?
+  createdAt   DateTime        @default(now())
+  sessions    WorkoutSession[]
+  memberships GroupMember[]
+}
+
+model WorkoutTemplate {
+  id              String             @id @default(uuid())
+  name            String             @unique
+  orderIndex      Int
+  templateEntries TemplateExercise[]
+  sessions        WorkoutSession[]
+}
+
+model Exercise {
+  id              String             @id @default(uuid())
+  name            String             @unique
+  defaultSets     Int                @default(4)
+  muscleGroup     String?
+  templateEntries TemplateExercise[]
+  logs            ExerciseLog[]
+  createdAt       DateTime           @default(now())
+}
+
+model TemplateExercise {
+  id         String          @id @default(uuid())
+  templateId String
+  exerciseId String
+  orderIndex Int
+  enabled    Boolean         @default(true)
+  template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise   Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, exerciseId])
+  @@index([templateId, orderIndex])
+}
+
+model WorkoutSession {
+  id           String          @id @default(uuid())
+  userId       String
+  templateId   String?
+  startedAt    DateTime        @default(now())
+  endedAt      DateTime?
+  notes        String?
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template     WorkoutTemplate?@relation(fields: [templateId], references: [id], onDelete: SetNull)
+  exerciseLogs ExerciseLog[]
+
+  @@index([userId, startedAt])
+}
+
+model ExerciseLog {
+  id         String         @id @default(uuid())
+  sessionId  String
+  exerciseId String
+  orderIndex Int
+  comment    String?
+  session    WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise   Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  setLogs    SetLog[]
+
+  @@unique([sessionId, exerciseId])
+  @@index([sessionId, orderIndex])
+}
+
+model SetLog {
+  id            String      @id @default(uuid())
+  exerciseLogId String
+  setNumber     Int
+  weight        Decimal     @db.Decimal(8, 2)
+  reps          Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  exerciseLog   ExerciseLog @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade)
+
+  @@unique([exerciseLogId, setNumber])
+  @@index([createdAt])
+}
+
+model Group {
+  id          String        @id @default(uuid())
+  name        String
+  inviteCode  String        @unique
+  createdAt   DateTime      @default(now())
+  members     GroupMember[]
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}

@@ -1,0 +1,123 @@
+import { useEffect, useMemo, useState } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BottomNav } from "./components/BottomNav";
+import { LoadingScreen } from "./components/LoadingScreen";
+import { apiRequest } from "./lib/api";
+import { getTelegramWebApp, initTelegramTheme } from "./lib/telegram";
+import { HistoryPage } from "./pages/HistoryPage";
+import { LeaderboardPage } from "./pages/LeaderboardPage";
+import { ProgressPage } from "./pages/ProgressPage";
+import { TodayPage } from "./pages/TodayPage";
+import { WorkoutPage } from "./pages/WorkoutPage";
+import type { User } from "./types";
+
+type AuthState = {
+  token: string;
+  user: User;
+};
+
+function useAuthState(): { state: AuthState | null; loading: boolean; error: string | null } {
+  const [state, setState] = useState<AuthState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const bootstrap = async () => {
+      setLoading(true);
+      setError(null);
+      initTelegramTheme();
+
+      const webApp = getTelegramWebApp();
+      const localToken = localStorage.getItem("pushme-token");
+
+      try {
+        if (localToken) {
+          const me = await apiRequest<User>("/me", { token: localToken });
+          if (!mounted) return;
+          setState({ token: localToken, user: me });
+          setLoading(false);
+          return;
+        }
+
+        let token = "";
+        if (webApp?.initData) {
+          const auth = await apiRequest<{ token: string; user: User }>("/auth/telegram", {
+            method: "POST",
+            body: { initData: webApp.initData }
+          });
+          token = auth.token;
+        } else {
+          const devTelegramId = import.meta.env.VITE_DEV_TELEGRAM_ID || "10001";
+          const auth = await apiRequest<{ token: string; user: User }>("/auth/dev", {
+            method: "POST",
+            body: {
+              telegramId: String(devTelegramId),
+              firstName: "Dev"
+            }
+          });
+          token = auth.token;
+        }
+
+        const me = await apiRequest<User>("/me", { token });
+        if (!mounted) return;
+
+        localStorage.setItem("pushme-token", token);
+        setState({ token, user: me });
+      } catch (err) {
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Auth failed");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return { state, loading, error };
+}
+
+function AppRoutes({ auth }: { auth: AuthState }): JSX.Element {
+  const location = useLocation();
+  const hideNav = useMemo(() => false, [location.pathname]);
+
+  return (
+    <div className="min-h-screen bg-transparent">
+      <Routes>
+        <Route path="/" element={<TodayPage token={auth.token} user={auth.user} />} />
+        <Route path="/session/:id" element={<WorkoutPage token={auth.token} />} />
+        <Route path="/history" element={<HistoryPage token={auth.token} />} />
+        <Route path="/leaderboard" element={<LeaderboardPage token={auth.token} user={auth.user} />} />
+        <Route path="/progress" element={<ProgressPage token={auth.token} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      {!hideNav && <BottomNav />}
+    </div>
+  );
+}
+
+export default function App(): JSX.Element {
+  const { state, loading, error } = useAuthState();
+
+  if (loading) {
+    return <LoadingScreen label="Подключаем Telegram и загружаем дневник" />;
+  }
+
+  if (!state) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-xl items-center px-4">
+        <div className="w-full rounded-3xl bg-card p-5 text-center shadow-card">
+          <p className="text-base font-semibold text-danger">Ошибка авторизации: {error ?? "Unknown"}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <AppRoutes auth={state} />;
+}
