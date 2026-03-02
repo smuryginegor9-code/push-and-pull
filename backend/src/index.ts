@@ -7,6 +7,7 @@ import { prisma } from "./lib/prisma.js";
 import { apiRouter } from "./routes/index.js";
 
 const app = express();
+app.set("etag", false);
 
 const corsOrigin = env.FRONTEND_ORIGIN === "*" ? true : env.FRONTEND_ORIGIN.split(",").map((value) => value.trim());
 

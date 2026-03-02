@@ -25,8 +25,11 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   try {
     response = await fetch(`${API_URL}${path}`, {
       method: options.method ?? "GET",
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
         ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
