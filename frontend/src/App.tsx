@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { BottomNav } from "./components/BottomNav";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { apiRequest } from "./lib/api";
-import { getTelegramWebApp, initTelegramTheme } from "./lib/telegram";
+import { getTelegramInitData, initTelegramTheme, waitForTelegramWebApp } from "./lib/telegram";
 import { HistoryPage } from "./pages/HistoryPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { TodayPage } from "./pages/TodayPage";
@@ -30,12 +30,12 @@ function useAuthState(): { state: AuthState | null; loading: boolean; error: str
     const bootstrap = async () => {
       setLoading(true);
       setError(null);
-      initTelegramTheme();
-
-      const webApp = getTelegramWebApp();
-      const localToken = localStorage.getItem("pushme-token");
 
       try {
+        const webApp = await waitForTelegramWebApp();
+        initTelegramTheme(webApp);
+
+        const localToken = localStorage.getItem("pushme-token");
         if (localToken) {
           const me = await apiRequest<User>("/me", { token: localToken });
           if (!mounted) return;
@@ -45,13 +45,14 @@ function useAuthState(): { state: AuthState | null; loading: boolean; error: str
         }
 
         let token = "";
-        if (webApp?.initData) {
+        const initData = getTelegramInitData(webApp);
+        if (initData) {
           const auth = await apiRequest<{ token: string; user: User }>("/auth/telegram", {
             method: "POST",
-            body: { initData: webApp.initData }
+            body: { initData }
           });
           token = auth.token;
-        } else {
+        } else if (import.meta.env.DEV) {
           const devTelegramId = import.meta.env.VITE_DEV_TELEGRAM_ID || "10001";
           const auth = await apiRequest<{ token: string; user: User }>("/auth/dev", {
             method: "POST",
@@ -61,6 +62,8 @@ function useAuthState(): { state: AuthState | null; loading: boolean; error: str
             }
           });
           token = auth.token;
+        } else {
+          throw new Error("Нет initData Telegram. Открой Mini App через кнопку в Telegram (/start).");
         }
 
         const me = await apiRequest<User>("/me", { token });
