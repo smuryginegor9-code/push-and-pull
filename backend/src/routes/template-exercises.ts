@@ -10,15 +10,19 @@ const patchSchema = z.object({
   enabled: z.boolean().optional(),
   orderIndex: z.coerce.number().int().min(0).optional()
 });
+const templateExerciseParamSchema = z.object({
+  id: z.string().uuid()
+});
 
 templateExercisesRouter.patch(
   "/:id",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { id } = templateExerciseParamSchema.parse(req.params);
     const body = patchSchema.parse(req.body);
 
     const updated = await prisma.templateExercise.update({
-      where: { id: req.params.id },
+      where: { id },
       data: {
         enabled: body.enabled,
         orderIndex: body.orderIndex

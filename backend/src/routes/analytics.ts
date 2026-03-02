@@ -16,17 +16,21 @@ const querySchema = z.object({
   metric: z.enum(["max_weight", "volume", "avg_weight"]).default("max_weight"),
   mode: z.enum(["real", "e1rm"]).default("real")
 });
+const exerciseParamSchema = z.object({
+  exerciseId: z.string().uuid()
+});
 
 analyticsRouter.get(
   "/exercise/:exerciseId",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { exerciseId } = exerciseParamSchema.parse(req.params);
     const query = querySchema.parse(req.query);
 
     const points = await getExerciseAnalytics(
       prisma,
       req.auth!.userId,
-      req.params.exerciseId,
+      exerciseId,
       query.period,
       query.metric,
       query.mode
@@ -40,12 +44,13 @@ analyticsRouter.get(
   "/exercise/:exerciseId/summary",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { exerciseId } = exerciseParamSchema.parse(req.params);
     const query = querySchema.parse(req.query);
 
     const points = await getExerciseAnalytics(
       prisma,
       req.auth!.userId,
-      req.params.exerciseId,
+      exerciseId,
       query.period,
       query.metric,
       query.mode

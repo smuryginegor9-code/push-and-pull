@@ -11,6 +11,9 @@ const startSessionSchema = z.object({
   templateId: z.string().uuid().nullable().optional(),
   notes: z.string().nullable().optional()
 });
+const sessionIdParamSchema = z.object({
+  id: z.string().uuid()
+});
 
 sessionsRouter.post(
   "/",
@@ -105,9 +108,11 @@ sessionsRouter.get(
   "/:id",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { id } = sessionIdParamSchema.parse(req.params);
+
     const session = await prisma.workoutSession.findFirst({
       where: {
-        id: req.params.id,
+        id,
         userId: req.auth!.userId
       },
       include: {
@@ -141,11 +146,12 @@ sessionsRouter.patch(
   "/:id",
   requireAuth,
   asyncHandler(async (req, res) => {
+    const { id } = sessionIdParamSchema.parse(req.params);
     const body = updateSessionSchema.parse(req.body);
 
     const existing = await prisma.workoutSession.findFirst({
       where: {
-        id: req.params.id,
+        id,
         userId: req.auth!.userId
       }
     });
