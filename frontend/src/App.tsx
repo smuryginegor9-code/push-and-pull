@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { BottomNav } from "./components/BottomNav";
 import { LoadingScreen } from "./components/LoadingScreen";
@@ -6,10 +6,13 @@ import { apiRequest } from "./lib/api";
 import { getTelegramWebApp, initTelegramTheme } from "./lib/telegram";
 import { HistoryPage } from "./pages/HistoryPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
-import { ProgressPage } from "./pages/ProgressPage";
 import { TodayPage } from "./pages/TodayPage";
 import { WorkoutPage } from "./pages/WorkoutPage";
 import type { User } from "./types";
+
+const ProgressPage = lazy(async () => ({
+  default: (await import("./pages/ProgressPage")).ProgressPage
+}));
 
 type AuthState = {
   token: string;
@@ -94,7 +97,14 @@ function AppRoutes({ auth }: { auth: AuthState }): JSX.Element {
         <Route path="/session/:id" element={<WorkoutPage token={auth.token} />} />
         <Route path="/history" element={<HistoryPage token={auth.token} />} />
         <Route path="/leaderboard" element={<LeaderboardPage token={auth.token} user={auth.user} />} />
-        <Route path="/progress" element={<ProgressPage token={auth.token} />} />
+        <Route
+          path="/progress"
+          element={(
+            <Suspense fallback={<LoadingScreen label="Загружаем прогресс" />}>
+              <ProgressPage token={auth.token} />
+            </Suspense>
+          )}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       {!hideNav && <BottomNav />}
