@@ -30,6 +30,11 @@ function useAuthState(): { state: AuthState | null; loading: boolean; error: str
     const bootstrap = async () => {
       setLoading(true);
       setError(null);
+      const hardTimeout = window.setTimeout(() => {
+        if (!mounted) return;
+        setError("Таймаут инициализации Mini App. Проверь HTTPS/IPv6 и открой заново через /start.");
+        setLoading(false);
+      }, 20000);
 
       try {
         const webApp = await waitForTelegramWebApp();
@@ -75,6 +80,7 @@ function useAuthState(): { state: AuthState | null; loading: boolean; error: str
         if (!mounted) return;
         setError(err instanceof Error ? err.message : "Auth failed");
       } finally {
+        window.clearTimeout(hardTimeout);
         if (mounted) setLoading(false);
       }
     };

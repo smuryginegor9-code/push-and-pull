@@ -13,17 +13,33 @@ type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   token?: string;
   body?: unknown;
+  timeoutMs?: number;
 };
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
-    },
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined
-  });
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs ?? 15000;
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
+      },
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError(`Request timeout after ${timeoutMs}ms`, 408);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
 
   if (!response.ok) {
     let message = `HTTP ${response.status}`;
