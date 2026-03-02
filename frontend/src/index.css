@@ -27,7 +27,7 @@ body,
 }
 
 body {
-  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  font-family: "SF Pro Display", "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
   color: var(--text);
 }
 
