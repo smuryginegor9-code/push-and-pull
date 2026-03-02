@@ -15,6 +15,7 @@ if (!webAppUrl) {
 }
 
 const bot = new Telegraf(token);
+let isRunning = false;
 
 bot.start(async (ctx) => {
   await ctx.reply(
@@ -25,9 +26,35 @@ bot.start(async (ctx) => {
   );
 });
 
-bot.launch().then(() => {
-  console.log("Bot started");
+bot.catch((error) => {
+  console.error("Bot update error:", error);
 });
 
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
+async function main(): Promise<void> {
+  try {
+    const webhookInfo = await bot.telegram.getWebhookInfo();
+    if (webhookInfo.url) {
+      await bot.telegram.deleteWebhook();
+      console.log("Existing webhook removed. Using long polling mode.");
+    }
+
+    await bot.launch();
+    isRunning = true;
+    console.log("Bot started");
+  } catch (error) {
+    console.error("Bot launch failed:", error);
+    process.exit(1);
+  }
+}
+
+function shutdown(signal: "SIGINT" | "SIGTERM"): void {
+  if (isRunning) {
+    bot.stop(signal);
+  }
+  process.exit(0);
+}
+
+process.once("SIGINT", () => shutdown("SIGINT"));
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+
+void main();
