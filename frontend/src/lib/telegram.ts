@@ -5,6 +5,18 @@ declare global {
         initData?: string;
         themeParams?: Record<string, string>;
         colorScheme?: "light" | "dark";
+        safeAreaInset?: {
+          top?: number;
+          bottom?: number;
+          left?: number;
+          right?: number;
+        };
+        contentSafeAreaInset?: {
+          top?: number;
+          bottom?: number;
+          left?: number;
+          right?: number;
+        };
         ready?: () => void;
         expand?: () => void;
         setHeaderColor?: (color: string) => void;
@@ -53,6 +65,16 @@ export async function waitForTelegramWebApp(timeoutMs = 3000, stepMs = 100): Pro
 export function initTelegramTheme(webApp?: TelegramWebApp): void {
   const tgWebApp = webApp ?? getTelegramWebApp();
   const params = tgWebApp?.themeParams ?? {};
+  const contentSafeTop = tgWebApp?.contentSafeAreaInset?.top;
+  const safeTop = tgWebApp?.safeAreaInset?.top;
+  const topOffset =
+    typeof contentSafeTop === "number"
+      ? contentSafeTop
+      : typeof safeTop === "number"
+        ? safeTop + 44
+        : tgWebApp
+          ? 56
+          : 0;
 
   const root = document.documentElement;
   root.style.setProperty("--surface", params.bg_color ?? "#0f1318");
@@ -63,6 +85,7 @@ export function initTelegramTheme(webApp?: TelegramWebApp): void {
   root.style.setProperty("--danger", "#fb7185");
   root.style.setProperty("--text", params.text_color ?? "#ecf2f8");
   root.style.setProperty("--subtle", params.hint_color ?? "#9aa7b5");
+  root.style.setProperty("--tg-top-offset", `${Math.max(0, topOffset)}px`);
 
   tgWebApp?.ready?.();
   tgWebApp?.expand?.();
