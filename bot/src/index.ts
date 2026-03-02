@@ -4,16 +4,18 @@ import { Markup, Telegraf } from "telegraf";
 dotenv.config();
 
 const token = process.env.BOT_TOKEN;
-const webAppUrl = process.env.WEB_APP_URL;
+const webAppUrlRaw = process.env.WEB_APP_URL;
 const webAppVersion = process.env.WEB_APP_VERSION || `${Date.now()}`;
 
 if (!token) {
   throw new Error("BOT_TOKEN is required");
 }
 
-if (!webAppUrl) {
+if (!webAppUrlRaw) {
   throw new Error("WEB_APP_URL is required");
 }
+
+const webAppUrl = webAppUrlRaw;
 
 function getVersionedWebAppUrl(): string {
   const url = new URL(webAppUrl);
