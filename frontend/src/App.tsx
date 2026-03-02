@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { BottomNav } from "./components/BottomNav";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { apiRequest } from "./lib/api";
-import { getTelegramInitData, initTelegramTheme, waitForTelegramWebApp } from "./lib/telegram";
+import { getTelegramInitData, getTelegramWebApp, initTelegramTheme, waitForTelegramWebApp } from "./lib/telegram";
 import { HistoryPage } from "./pages/HistoryPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { TodayPage } from "./pages/TodayPage";
@@ -26,6 +26,16 @@ function useAuthState(): { state: AuthState | null; loading: boolean; error: str
 
   useEffect(() => {
     let mounted = true;
+    const delayedReadyStart = Date.now();
+    const delayedReadyHandle = window.setInterval(() => {
+      const webApp = getTelegramWebApp();
+      if (webApp) {
+        initTelegramTheme(webApp);
+        window.clearInterval(delayedReadyHandle);
+      } else if (Date.now() - delayedReadyStart > 20000) {
+        window.clearInterval(delayedReadyHandle);
+      }
+    }, 250);
 
     const bootstrap = async () => {
       setLoading(true);
@@ -89,6 +99,7 @@ function useAuthState(): { state: AuthState | null; loading: boolean; error: str
 
     return () => {
       mounted = false;
+      window.clearInterval(delayedReadyHandle);
     };
   }, []);
 
