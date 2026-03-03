@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Push Me</title>
     <script src="/telegram-web-app.js" defer></script>
+    <script>
+      (function () {
+        function safeReady() {
+          try {
+            if (window.Telegram && window.Telegram.WebApp) {
+              window.Telegram.WebApp.ready && window.Telegram.WebApp.ready();
+              window.Telegram.WebApp.expand && window.Telegram.WebApp.expand();
+            }
+          } catch (e) {
+            console.error("Telegram ready bootstrap failed:", e);
+          }
+        }
+
+        window.addEventListener("DOMContentLoaded", safeReady);
+        window.addEventListener("load", safeReady);
+
+        window.addEventListener("error", function (event) {
+          var root = document.getElementById("root");
+          if (!root) return;
+          root.innerHTML =
+            '<div style="padding:16px;color:#fff;font-family:-apple-system,system-ui,sans-serif;background:#111;min-height:100vh;">' +
+            "<h3>Ошибка запуска Mini App</h3>" +
+            "<p>Обновите страницу или откройте снова через /start.</p>" +
+            "</div>";
+          console.error("Global error:", event.error || event.message);
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
