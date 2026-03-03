@@ -4,6 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Push Me</title>
+    <script>
+      (function () {
+        function postBridge(eventType, eventData) {
+          var payload = JSON.stringify(eventData || {});
+          try {
+            if (window.TelegramWebviewProxy && typeof window.TelegramWebviewProxy.postEvent === "function") {
+              window.TelegramWebviewProxy.postEvent(eventType, payload);
+            }
+          } catch (e) {}
+          try {
+            if (window.external && typeof window.external.notify === "function") {
+              window.external.notify(JSON.stringify({ eventType: eventType, eventData: eventData || {} }));
+            }
+          } catch (e) {}
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage(JSON.stringify({ eventType: eventType, eventData: eventData || {} }), "*");
+            }
+          } catch (e) {}
+        }
+
+        function pushReady() {
+          postBridge("iframe_ready", { reload_supported: true });
+          postBridge("web_app_ready", {});
+          postBridge("web_app_expand", {});
+        }
+
+        pushReady();
+        var bridgeTick = window.setInterval(pushReady, 250);
+        window.setTimeout(function () {
+          window.clearInterval(bridgeTick);
+        }, 12000);
+      })();
+    </script>
     <script src="/bootstrap.js" defer></script>
   </head>
   <body>

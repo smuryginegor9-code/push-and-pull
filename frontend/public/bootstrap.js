@@ -50,26 +50,40 @@
     postTelegramEvent("web_app_expand", {});
   }
 
-  function loadScript(src, done) {
+  function loadScript(src, done, timeoutMs) {
     var script = document.createElement("script");
+    var finished = false;
+    var timer = window.setTimeout(function () {
+      if (finished) return;
+      finished = true;
+      done(false);
+    }, timeoutMs || 4000);
+
+    function finish(ok) {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(timer);
+      done(ok);
+    }
+
     script.src = src;
     script.async = true;
     script.onload = function () {
-      done(true);
+      finish(true);
     };
     script.onerror = function () {
-      done(false);
+      finish(false);
     };
     document.head.appendChild(script);
   }
 
   function loadTelegramSdkWithFallback() {
-    loadScript("/telegram-web-app.js", function (ok) {
+    loadScript("https://telegram.org/js/telegram-web-app.js", function (ok) {
       if (ok) {
         forceReady();
         return;
       }
-      loadScript("https://telegram.org/js/telegram-web-app.js", function () {
+      loadScript("/telegram-web-app.js", function () {
         forceReady();
       });
     });
