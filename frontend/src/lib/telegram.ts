@@ -4,9 +4,6 @@ declare global {
     TelegramWebviewProxy?: {
       postEvent?: (eventType: string, eventData?: string) => void;
     };
-    external?: {
-      notify?: (message: string) => void;
-    };
     Telegram?: {
       WebApp?: {
         initData?: string;
@@ -34,6 +31,9 @@ declare global {
 }
 
 type TelegramWebApp = NonNullable<NonNullable<Window["Telegram"]>["WebApp"]>;
+type LegacyExternal = External & {
+  notify?: (message: string) => void;
+};
 
 export function getTelegramWebApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp;
@@ -52,8 +52,9 @@ function postTelegramEvent(eventType: string, eventData: Record<string, unknown>
   }
 
   try {
-    if (typeof window.external?.notify === "function") {
-      window.external.notify(JSON.stringify({ eventType, eventData }));
+    const externalBridge = window.external as LegacyExternal | undefined;
+    if (typeof externalBridge?.notify === "function") {
+      externalBridge.notify(JSON.stringify({ eventType, eventData }));
       return true;
     }
   } catch {
