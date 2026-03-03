@@ -19,9 +19,7 @@ const webAppUrl = webAppUrlRaw;
 
 function getVersionedWebAppUrl(): string {
   const url = new URL(webAppUrl);
-  if (!url.searchParams.has("v")) {
-    url.searchParams.set("v", webAppVersion);
-  }
+  url.searchParams.set("v", webAppVersion);
   return url.toString();
 }
 

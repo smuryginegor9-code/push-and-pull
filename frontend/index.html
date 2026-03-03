@@ -4,22 +4,97 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Push Me</title>
-    <script src="/telegram-web-app.js" defer></script>
     <script>
       (function () {
-        function safeReady() {
+        window.__PUSHME_REACT_BOOTED = false;
+
+        function postTelegramEvent(eventType, eventData) {
+          var payload = JSON.stringify(eventData || {});
           try {
-            if (window.Telegram && window.Telegram.WebApp) {
-              window.Telegram.WebApp.ready && window.Telegram.WebApp.ready();
-              window.Telegram.WebApp.expand && window.Telegram.WebApp.expand();
+            if (window.TelegramWebviewProxy && typeof window.TelegramWebviewProxy.postEvent === "function") {
+              window.TelegramWebviewProxy.postEvent(eventType, payload);
+              return true;
             }
-          } catch (e) {
-            console.error("Telegram ready bootstrap failed:", e);
-          }
+          } catch (e) {}
+          try {
+            if (window.external && typeof window.external.notify === "function") {
+              window.external.notify(JSON.stringify({ eventType: eventType, eventData: eventData || {} }));
+              return true;
+            }
+          } catch (e) {}
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage(
+                JSON.stringify({ eventType: eventType, eventData: eventData || {} }),
+                "*"
+              );
+              return true;
+            }
+          } catch (e) {}
+          return false;
         }
 
-        window.addEventListener("DOMContentLoaded", safeReady);
-        window.addEventListener("load", safeReady);
+        function forceReady() {
+          var webApp = window.Telegram && window.Telegram.WebApp;
+          if (webApp) {
+            try {
+              webApp.ready && webApp.ready();
+              webApp.expand && webApp.expand();
+              return;
+            } catch (e) {}
+          }
+          postTelegramEvent("web_app_ready", {});
+          postTelegramEvent("web_app_expand", {});
+        }
+
+        function loadScript(src, done) {
+          var script = document.createElement("script");
+          script.src = src;
+          script.async = true;
+          script.onload = function () {
+            done(true);
+          };
+          script.onerror = function () {
+            done(false);
+          };
+          document.head.appendChild(script);
+        }
+
+        function loadTelegramSdkWithFallback() {
+          loadScript("/telegram-web-app.js", function (ok) {
+            if (ok) {
+              forceReady();
+              return;
+            }
+            loadScript("https://telegram.org/js/telegram-web-app.js", function () {
+              forceReady();
+            });
+          });
+        }
+        loadTelegramSdkWithFallback();
+        forceReady();
+        var readyTick = window.setInterval(forceReady, 300);
+        window.setTimeout(function () {
+          window.clearInterval(readyTick);
+        }, 12000);
+
+        window.addEventListener("DOMContentLoaded", function () {
+          forceReady();
+          window.setTimeout(forceReady, 250);
+          window.setTimeout(forceReady, 1200);
+        });
+        window.addEventListener("load", forceReady);
+
+        window.setTimeout(function () {
+          if (window.__PUSHME_REACT_BOOTED) return;
+          var root = document.getElementById("root");
+          if (!root || root.children.length > 0) return;
+          root.innerHTML =
+            '<div style="padding:16px;color:#fff;font-family:-apple-system,system-ui,sans-serif;background:#111;min-height:100vh;">' +
+            "<h3>Mini App не запустился</h3>" +
+            "<p>Нажми reload в Telegram и открой снова через /start.</p>" +
+            "</div>";
+        }, 12000);
 
         window.addEventListener("error", function (event) {
           var root = document.getElementById("root");

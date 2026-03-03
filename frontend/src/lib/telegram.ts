@@ -1,5 +1,12 @@
 declare global {
   interface Window {
+    __PUSHME_REACT_BOOTED?: boolean;
+    TelegramWebviewProxy?: {
+      postEvent?: (eventType: string, eventData?: string) => void;
+    };
+    external?: {
+      notify?: (message: string) => void;
+    };
     Telegram?: {
       WebApp?: {
         initData?: string;
@@ -30,6 +37,51 @@ type TelegramWebApp = NonNullable<NonNullable<Window["Telegram"]>["WebApp"]>;
 
 export function getTelegramWebApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp;
+}
+
+function postTelegramEvent(eventType: string, eventData: Record<string, unknown> = {}): boolean {
+  const encodedData = JSON.stringify(eventData);
+
+  try {
+    if (typeof window.TelegramWebviewProxy?.postEvent === "function") {
+      window.TelegramWebviewProxy.postEvent(eventType, encodedData);
+      return true;
+    }
+  } catch {
+    // Ignore and try legacy bridges.
+  }
+
+  try {
+    if (typeof window.external?.notify === "function") {
+      window.external.notify(JSON.stringify({ eventType, eventData }));
+      return true;
+    }
+  } catch {
+    // Ignore and try iframe bridge.
+  }
+
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(JSON.stringify({ eventType, eventData }), "*");
+      return true;
+    }
+  } catch {
+    // Ignore bridge errors.
+  }
+
+  return false;
+}
+
+export function forceTelegramReadyAndExpand(): void {
+  const webApp = getTelegramWebApp();
+  if (webApp) {
+    webApp.ready?.();
+    webApp.expand?.();
+    return;
+  }
+
+  postTelegramEvent("web_app_ready");
+  postTelegramEvent("web_app_expand");
 }
 
 function getHashParam(name: string): string | null {
@@ -86,7 +138,5 @@ export function initTelegramTheme(webApp?: TelegramWebApp): void {
   root.style.setProperty("--text", params.text_color ?? "#ecf2f8");
   root.style.setProperty("--subtle", params.hint_color ?? "#9aa7b5");
   root.style.setProperty("--tg-top-offset", `${Math.max(0, topOffset)}px`);
-
-  tgWebApp?.ready?.();
-  tgWebApp?.expand?.();
+  forceTelegramReadyAndExpand();
 }
