@@ -23,7 +23,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/pushme
       JWT_SECRET: change_this_to_long_random_secret
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      FRONTEND_ORIGIN: https://pullandpush.tw1.ru,http://localhost:5173,http://localhost
+      FRONTEND_ORIGIN: https://esmurygin.ru,http://localhost:5173,http://localhost
       AUTH_MAX_AGE_SECONDS: 86400
     depends_on:
       - db
@@ -34,7 +34,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: https://pullandpush.tw1.ru/api
+        VITE_API_URL: https://esmurygin.ru/api
     container_name: pushme-frontend
     depends_on:
       - backend
