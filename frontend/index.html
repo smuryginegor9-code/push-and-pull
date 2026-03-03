@@ -34,7 +34,20 @@
           return false;
         }
 
+        function notifyIframeReady() {
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage(
+                JSON.stringify({ eventType: "iframe_ready", eventData: { reload_supported: true } }),
+                "*"
+              );
+            }
+          } catch (e) {}
+        }
+
         function forceReady() {
+          notifyIframeReady();
+
           var webApp = window.Telegram && window.Telegram.WebApp;
           if (webApp) {
             try {

@@ -73,7 +73,22 @@ function postTelegramEvent(eventType: string, eventData: Record<string, unknown>
   return false;
 }
 
+function notifyTelegramIframeReady(): void {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        JSON.stringify({ eventType: "iframe_ready", eventData: { reload_supported: true } }),
+        "*"
+      );
+    }
+  } catch {
+    // Ignore iframe bridge errors.
+  }
+}
+
 export function forceTelegramReadyAndExpand(): void {
+  notifyTelegramIframeReady();
+
   const webApp = getTelegramWebApp();
   if (webApp) {
     webApp.ready?.();
