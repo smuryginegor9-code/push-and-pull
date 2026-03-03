@@ -39,15 +39,29 @@ bot.catch((error) => {
   console.error("Bot update error:", error);
 });
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 async function main(): Promise<void> {
   try {
-    const webhookInfo = await bot.telegram.getWebhookInfo();
+    const webhookInfo = await withTimeout(bot.telegram.getWebhookInfo(), 10000, "getWebhookInfo");
     if (webhookInfo.url) {
-      await bot.telegram.deleteWebhook();
+      await withTimeout(bot.telegram.deleteWebhook(), 10000, "deleteWebhook");
       console.log("Existing webhook removed. Using long polling mode.");
     }
 
-    await bot.launch();
+    await withTimeout(bot.launch(), 10000, "bot.launch");
     isRunning = true;
     console.log("Bot started with WebApp URL:", getVersionedWebAppUrl());
   } catch (error) {
